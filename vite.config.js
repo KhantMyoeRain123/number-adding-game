@@ -11,12 +11,6 @@ export default defineConfig({
         changeOrigin: true,  // Modifies the Origin header to appear as if the request came from the backend's domain
         secure: false
       },
-      '/api/ws': {
-        target: 'ws://localhost:8080',
-        changeOrigin: true,  // Modifies the Origin header to appear as if the request came from the backend's domain
-        ws: true,        
-      },
-
       '/api/': {
         target: 'http://localhost:8080',
         changeOrigin: true,  // Modifies the Origin header to appear as if the request came from the backend's domain
