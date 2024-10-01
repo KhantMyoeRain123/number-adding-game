@@ -21,14 +21,20 @@ var (
 )
 
 type GameServer struct {
-	RoomCodeToUser map[string][]int //a mapping between room code and the users in the room
+	RoomCodeToUser map[string][]Player //a mapping between room code and the users in the room
+	PlayerList     map[Player]bool
 }
 
 func NewGameServer() *GameServer {
 
 	return &GameServer{
-		RoomCodeToUser: make(map[string][]int),
+		RoomCodeToUser: make(map[string][]Player),
+		PlayerList:     make(map[Player]bool),
 	}
+}
+
+func (gs *GameServer) AddPlayer(p *Player) {
+	return
 }
 
 // API handlers start here
@@ -36,19 +42,31 @@ func NewGameServer() *GameServer {
 func (gs *GameServer) ServeWS(w http.ResponseWriter, r *http.Request) {
 	log.Println("New Connection")
 
-	_, err := websocketUpgrader.Upgrade(w, r, nil)
+	conn, err := websocketUpgrader.Upgrade(w, r, nil)
+	defer func() {
+		log.Println("Closing Connection...")
+		err := conn.Close()
+
+		if err != nil {
+			log.Println("Could not close connection: ", err)
+		}
+	}()
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	player := NewPlayer(conn, gs)
+
+	gs.AddPlayer(player)
+
+	go player.ReadMessages()
+	go player.WriteMessages()
 }
 
 // POST:make a room
 func (gs *GameServer) MakeRoom(w http.ResponseWriter, r *http.Request) {
-	//create a random player id
-	//create a random room id
-	//add the mapping to the game server room to player map
-	//return json success message
+	//create a random room code
+	//return json success message with room code
 }
 
 // POST:join a room using the room code
