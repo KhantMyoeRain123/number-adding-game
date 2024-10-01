@@ -2,7 +2,8 @@ import { useEffect } from "react"
 
 function App() {
  useEffect(()=>{
-  const fetchData = async () => {
+  //fetch test
+  /*const fetchData = async () => {
     try {
       const response = await fetch('/api/test');
       if (!response.ok) {
@@ -13,8 +14,18 @@ function App() {
       console.error('There was a problem with the fetch operation:', error);
     }
   };
-  fetchData();
- })
+  fetchData();*/
+
+  //websocket test
+  const socket = new WebSocket('ws://localhost:5173/api/ws');
+
+  socket.onopen = () => {
+    console.log('WebSocket connection opened');
+  };
+  return ()=>{
+    socket.close(1000, 'Closing normally'); 
+  }
+ },[]);
  return <div>
   <h1>
     Welcome to the App!
