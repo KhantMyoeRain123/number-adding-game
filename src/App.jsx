@@ -17,7 +17,7 @@ function App() {
   fetchData();*/
 
   //websocket test
-  const socket = new WebSocket('ws://localhost:8080/api/ws');
+  const socket = new WebSocket(import.meta.env.VITE_WS_URL);
 
   socket.onopen = () => {
     console.log('WebSocket connection opened');

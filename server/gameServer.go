@@ -19,9 +19,10 @@ var (
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
-			origin := r.Header.Get("Origin")
+			/*origin := r.Header.Get("Origin")
 
-			return origin == "http://localhost:5173"
+			return origin == "http://localhost:5173"*/
+			return true //this needs to be changed later on for security
 		},
 	}
 )
@@ -118,7 +119,7 @@ func (gs *GameServer) MakeRoom(w http.ResponseWriter, r *http.Request) {
 
 // POST:join a room using the room code
 func (gs *GameServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
-	
+
 }
 
 // test endpoints
