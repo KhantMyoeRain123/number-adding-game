@@ -20,8 +20,8 @@ func setupAPI(mux *http.ServeMux) {
 	mux.HandleFunc("/api/test", ApiTest)
 	mux.HandleFunc("/api/ws", gameServer.ServeWS)
 	//room routes
-	mux.HandleFunc("POST /api/room/make",gameServer.MakeRoom)
-	mux.HandleFunc("POST /api/room/join",gameServer.JoinRoom)
+	mux.HandleFunc("POST /api/room/make", gameServer.MakeRoom)
+	mux.HandleFunc("GET /api/room/get/{roomCode}", gameServer.GetRoom)
 
 	log.Println("Server is running on http://localhost:8080")
 	err := http.ListenAndServe(":8080", mux)

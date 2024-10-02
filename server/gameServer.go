@@ -6,12 +6,14 @@ import (
 	"log"
 	"math/rand/v2"
 	"net/http"
+	"sync"
 
 	"github.com/gorilla/websocket"
 )
 
 const (
 	ROOM_CODE_LENGTH = 6
+	ROOM_WAITING     = 0
 )
 
 var (
@@ -27,23 +29,28 @@ var (
 	}
 )
 
+type RoomState struct {
+	PlayerList []Player
+	State      int
+}
+
 type GameServer struct {
-	RoomCodeToPlayer map[string][]Player //a mapping between room code and the users in the room
-	PlayerList     map[*Player]bool
+	RoomCodeToState map[string]RoomState //a mapping between room code and the users in the room
+	PlayerList      map[*Player]bool
+	mu              sync.Mutex
 }
 
 func NewGameServer() *GameServer {
 
 	return &GameServer{
-		RoomCodeToPlayer: make(map[string][]Player),
-		PlayerList:     make(map[*Player]bool),
+		RoomCodeToState: make(map[string]RoomState),
+		PlayerList:      make(map[*Player]bool),
 	}
 }
 
 func (gs *GameServer) AddPlayer(p *Player) {
 	return
 }
-
 
 // upgrades to websocket
 func (gs *GameServer) ServeWS(w http.ResponseWriter, r *http.Request) {
@@ -78,48 +85,81 @@ func generateRoomCode(length int) string {
 	}
 	return string(roomCode)
 }
-type ErrorResponse struct{
-	Status string `json:"status"`
+
+type ErrorResponse struct {
+	Status  string `json:"status"`
 	Message string `json:"message"`
 }
 
-func SendJSONError(w http.ResponseWriter, message string, statusCode int){
-	errorResponse:=ErrorResponse{
-		Status:"error",
-		Message: "message",
+func SendJSONError(w http.ResponseWriter, message string, statusCode int) {
+	errorResponse := ErrorResponse{
+		Status:  "error",
+		Message: message,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
 	json.NewEncoder(w).Encode(errorResponse)
 }
-type MakeRoomResponse struct{
+
+type RoomCodeResponse struct {
 	Status   string `json:"status"`
 	RoomCode string `json:"room_code"`
+	State    int    `json:"room_state"`
+	Host     bool   `json:"host"`
 }
+
 // REST handlers start here
 // POST:make a room
 func (gs *GameServer) MakeRoom(w http.ResponseWriter, r *http.Request) {
-	roomCode:=generateRoomCode(ROOM_CODE_LENGTH)
-	gs.RoomCodeToPlayer[roomCode]=make([]Player,5)
-	log.Printf("Created a new room with code %s...",roomCode)
-	response:=MakeRoomResponse{
-		Status:"success",
+	roomCode := generateRoomCode(ROOM_CODE_LENGTH)
+	gs.mu.Lock()
+	defer gs.mu.Unlock()
+	gs.RoomCodeToState[roomCode] = RoomState{
+		PlayerList: make([]Player, 5),
+		State:      ROOM_WAITING,
+	}
+	log.Printf("Created a new room with code %s...", roomCode)
+	response := RoomCodeResponse{
+		Status:   "success",
 		RoomCode: roomCode,
+		State:    gs.RoomCodeToState[roomCode].State,
+		Host:     true,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 
 	err := json.NewEncoder(w).Encode(response)
 	if err != nil {
-		SendJSONError(w,"Failed to encode response",http.StatusInternalServerError)
+		SendJSONError(w, "Failed to encode response", http.StatusInternalServerError)
 		return
-	}	
+	}
 }
 
-// POST:join a room using the room code
-func (gs *GameServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
+// GET: checks whether a room with a certain room code exists
+func (gs *GameServer) GetRoom(w http.ResponseWriter, r *http.Request) {
+	roomCode := r.PathValue("roomCode")
+	gs.mu.Lock()
+	defer gs.mu.Unlock()
+	if _, ok := gs.RoomCodeToState[roomCode]; ok {
+		response := RoomCodeResponse{
+			Status:   "success",
+			RoomCode: roomCode,
+			State:    gs.RoomCodeToState[roomCode].State,
+			Host: false,
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
 
+		err := json.NewEncoder(w).Encode(response)
+		if err != nil {
+			SendJSONError(w, "Failed to encode response", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		SendJSONError(w, "Room not found", http.StatusBadRequest)
+		return
+	}
 }
 
 // test endpoints
