@@ -3,7 +3,7 @@ import { useEffect } from "react"
 function App() {
  useEffect(()=>{
   //fetch test
-  /*const fetchData = async () => {
+  const fetchData = async () => {
     try {
       const response = await fetch('/api/test');
       if (!response.ok) {
@@ -14,7 +14,7 @@ function App() {
       console.error('There was a problem with the fetch operation:', error);
     }
   };
-  fetchData();*/
+  fetchData();
 
   //websocket test
   const socket = new WebSocket(import.meta.env.VITE_WS_URL);
