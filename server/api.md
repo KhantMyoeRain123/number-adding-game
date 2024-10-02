@@ -36,7 +36,7 @@ Response
 
 # Websocket Events
 
-### Error Event
+### Error Event (Server->Client)
 ```json
 {
 	"type": "error",
@@ -80,15 +80,12 @@ This is the server's reply to the player who sent ```initialized``` event, indic
 {
 	"type": "newUser",
 	"payload": {
-        "playerId":"7A84",
+        "playerId":"55C4",
         "username":"Jeff",
     }
 }
 ```
 The server sends this to players other than the joining player after ```initialized``` is handled successfully.
-
-
-
 
 # Initialization Flow
 ### Making a Room
