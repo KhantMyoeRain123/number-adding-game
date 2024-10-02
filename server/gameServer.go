@@ -118,8 +118,7 @@ func (gs *GameServer) MakeRoom(w http.ResponseWriter, r *http.Request) {
 
 // POST:join a room using the room code
 func (gs *GameServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
-	//index into the room to player map
-	//return json message with room code if room exists, error if not
+	
 }
 
 // test endpoints
