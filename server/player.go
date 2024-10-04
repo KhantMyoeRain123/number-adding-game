@@ -33,7 +33,7 @@ func (p *Player) ReadMessages() {
 	defer func() {
 		p.GameServer.mu.Lock()
 		defer p.GameServer.mu.Unlock()
-		p.GameServer.RemoveClient(p)
+		p.GameServer.RemovePlayer(p)
 	}()
 	for {
 		_, eventBytes, err := p.Connection.ReadMessage()

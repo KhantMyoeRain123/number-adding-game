@@ -79,7 +79,7 @@ func (gs *GameServer) AddPlayer(player *Player) {
 	gs.RoomCodeToState[player.RoomCode].RoomPlayerList[player.PlayerId] = player
 }
 
-func (gs *GameServer) RemoveClient(player *Player) {
+func (gs *GameServer) RemovePlayer(player *Player) {
 	log.Println("Closing connection for " + player.PlayerId)
 	if _, ok := gs.PlayerList[player.PlayerId]; ok {
 		player.Connection.Close()
