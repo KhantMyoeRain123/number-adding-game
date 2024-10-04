@@ -39,6 +39,7 @@ type RoomState struct {
 type GameServer struct {
 	RoomCodeToState map[string]RoomState //a mapping between room code and the users in the room
 	PlayerList      map[string]*Player
+	Handlers        map[string]EventHandler
 	mu              sync.Mutex
 }
 
@@ -69,6 +70,43 @@ type WebsocketUpgradeResponse struct {
 	PlayerName string
 	RoomCode   string
 	Host       bool
+}
+
+func (gs *GameServer) AddPlayer(player *Player) {
+	//adds player to playerList
+	gs.PlayerList[player.PlayerId] = player
+	//adds the player to the room
+	gs.RoomCodeToState[player.RoomCode].RoomPlayerList[player.PlayerId] = player
+}
+
+func (gs *GameServer) RemoveClient(player *Player) {
+	log.Println("Closing connection for " + player.PlayerId)
+	if _, ok := gs.PlayerList[player.PlayerId]; ok {
+		player.Connection.Close()
+		delete(gs.PlayerList, player.PlayerId)
+
+		roomPlayerList := gs.RoomCodeToState[player.RoomCode].RoomPlayerList
+		//if player is host close connections of other  also delete the room
+		if player.Host {
+			for playerId, player := range roomPlayerList {
+				log.Println("Host has exited...Closing connection for " + playerId)
+				player.Connection.WriteMessage(
+					websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Host has exited...Closing connection for "+playerId),
+				)
+			}
+			delete(gs.RoomCodeToState, player.RoomCode)
+			log.Println("Removed room " + player.RoomCode)
+			log.Println(gs.PlayerList)
+			log.Println(gs.RoomCodeToState)
+		} else {
+			delete(roomPlayerList, player.PlayerId)
+			log.Println(gs.PlayerList)
+			log.Println(roomPlayerList)
+		}
+
+	}
+
 }
 
 // upgrades to websocket
@@ -129,17 +167,16 @@ func (gs *GameServer) MakeRoom(w http.ResponseWriter, r *http.Request) {
 	playerId := generateCode(4)
 	gs.mu.Lock()
 	defer gs.mu.Unlock()
-	//adds player to playerList
-	gs.PlayerList[playerId] = NewPlayer(playerId, playerName, true, roomCode, nil, gs)
 	//create the new room
 	gs.RoomCodeToState[roomCode] = RoomState{
 		RoomPlayerList: make(map[string]*Player),
 		State:          ROOM_WAITING,
 	}
-	//adds the player to the room
-	gs.RoomCodeToState[roomCode].RoomPlayerList[playerId] = gs.PlayerList[playerId]
-
 	log.Printf("Created a new room with code %s...", roomCode)
+	player := NewPlayer(playerId, playerName, true, roomCode, nil, gs)
+
+	gs.AddPlayer(player)
+
 	response := RoomCodeResponse{
 		Status:   "success",
 		PlayerId: playerId,
@@ -174,10 +211,8 @@ func (gs *GameServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 			RoomCode: roomCode,
 			State:    gs.RoomCodeToState[roomCode].State,
 		}
-		//adds player to playerList
-		gs.PlayerList[playerId] = NewPlayer(playerId, playerName, false, roomCode, nil, gs)
-		//adds the player to the room
-		gs.RoomCodeToState[roomCode].RoomPlayerList[playerId] = gs.PlayerList[playerId]
+		player := NewPlayer(playerId, playerName, false, roomCode, nil, gs)
+		gs.AddPlayer(player)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
