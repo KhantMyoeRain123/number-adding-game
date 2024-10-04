@@ -10,19 +10,18 @@ Response
 ```
 
 ### Make Room
-#### ```/api/room/make```
+#### ```/api/room/make?playerName={playerName}```
 Response
 ```json
 {
 	"status": "success",
     "playerId":"AD34",
 	"room_code": "77K43I",
-	"room_state": 0, //0 means WAITING, 1 means STARTED, 2 means ENDED
-    "host":true
+	"room_state": 0
 }
 ```
 ### Get Room
-#### ```/api/room/get/{roomCode}```
+#### ```/api/room/join/{roomCode}?playerName={playerName}```
 Path Parameters
 
 | Parameter  | Definition | Type
@@ -34,12 +33,11 @@ Response
 	"status": "success",
     "playerId":"AD34",
 	"room_code": "77K43I",
-	"room_state": 0,
-    "host":false 
+	"room_state": 0
 }
 ```
 ### Upgrade to Websocket
-#### ```ws://localhost:8080/ws?playerName={playerName}&playerId={playerId}&roomCode={roomCode}&host={host}```
+#### ```ws://localhost:8080/ws?playerId={playerId}```
 Query Parameters
 
 | Parameter  | Definition | Type
@@ -68,6 +66,6 @@ The server sends this to players other than the joining player after ```initiali
 ### Making a Room
 The player presses the Make Room button which will send a POST request to the endpoint ```/api/room/make```. When the endpoint returns a success then the frontend will ask for a websocket connection to the server through the route ```ws://localhost:8080/ws``` with the required query parameters.
 ### Joining a Room
-The player presses the Join Room button which will send a POST request to the endpoint ```/api/room/get/{roomCode}```. When the endpoint returns a success then the frontend will ask for a websocket connection to the server through the route ```ws://localhost:8080/ws``` with the required query parameters.
+The player presses the Join Room button which will send a POST request to the endpoint ```/api/room/join/{roomCode}```. When the endpoint returns a success then the frontend will ask for a websocket connection to the server through the route ```ws://localhost:8080/ws``` with the required query parameters.
 
 # Game Flow

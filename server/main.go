@@ -23,11 +23,11 @@ func setupAPI(mux *http.ServeMux) {
 	mux.Handle("/", fs)
 
 	defer func() {
-		for player := range gameServer.PlayerList {
-			log.Println("Closing connection for " + player.PlayerId)
+		for playerId, player := range gameServer.PlayerList {
+			log.Println("Closing connection for " + playerId)
 			player.Connection.WriteMessage(
 				websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseGoingAway, "Closing connection for "+player.PlayerId),
+				websocket.FormatCloseMessage(websocket.CloseGoingAway, "Closing connection for "+playerId),
 			)
 		}
 	}()
@@ -38,7 +38,7 @@ func setupAPI(mux *http.ServeMux) {
 	mux.HandleFunc("/api/ws", gameServer.ServeWS)
 	//room routes
 	mux.HandleFunc("POST /api/room/make", gameServer.MakeRoom)
-	mux.HandleFunc("GET /api/room/get/{roomCode}", gameServer.GetRoom)
+	mux.HandleFunc("POST /api/room/join/{roomCode}", gameServer.JoinRoom)
 
 	go func() {
 		log.Println("Server is running on http://localhost:8080")
