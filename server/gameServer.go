@@ -18,7 +18,7 @@ const (
 	ROOM_ENDED       = 2
 
 	QUESTION_LENGTH      = 10
-	MAX_NUMBER_OF_ROUNDS = 5
+	MAX_NUMBER_OF_ROUNDS = 1
 )
 
 var (
@@ -89,10 +89,13 @@ func (gs *GameServer) RemovePlayer(player *Player) {
 		if player.Host {
 			for playerId, player := range roomPlayerList {
 				log.Println("Host has exited...Closing connection for " + playerId)
-				player.Connection.WriteMessage(
-					websocket.CloseMessage,
-					websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Host has exited...Closing connection for "+playerId),
-				)
+				if player.Connection != nil {
+					player.Connection.WriteMessage(
+						websocket.CloseMessage,
+						websocket.FormatCloseMessage(websocket.CloseNormalClosure, "Host has exited...Closing connection for "+playerId),
+					)
+				}
+
 			}
 			delete(gs.RoomCodeToState, player.RoomCode)
 			log.Println("Removed room " + player.RoomCode)
@@ -220,9 +223,10 @@ func (gs *GameServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 			RoomCode: roomCode,
 			State:    gs.RoomCodeToState[roomCode].State,
 		}
-
-		player := NewPlayer(playerId, playerName, false, roomCode, nil, gs)
-		gs.AddPlayer(player)
+		if gs.RoomCodeToState[roomCode].State == ROOM_WAITING {
+			player := NewPlayer(playerId, playerName, false, roomCode, nil, gs)
+			gs.AddPlayer(player)
+		}
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)

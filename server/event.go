@@ -170,26 +170,32 @@ func AnswerHandler(event Event, p *Player) {
 	}
 	if roomState.NumberSubmitted == len(roomState.RoomPlayerList) {
 		//sleep for 5 seconds to wait for last player to get feedback
+		gs.mu.Unlock() //unlock here because we are just sleeping
 		start := time.Now()
 		time.Sleep(5 * time.Second)
 		duration := time.Since(start)
 		log.Printf("Slept for: %v\n", duration)
+
+		gs.mu.Lock() //lock again because we are accessing shared resource again
 		roomState.NumberSubmitted = 0
 		roomState.RoundNumber++
 
 		if roomState.RoundNumber > MAX_NUMBER_OF_ROUNDS {
+			roomState.State = ROOM_ENDED
 			//extract the players from roomPlayerList
 			roomPlayerList := roomState.RoomPlayerList
 			players := make([]*Player, len(roomPlayerList))
+			i := 0
 			for _, player := range roomPlayerList {
-				players = append(players, player)
+				players[i] = player
+				i++
 			}
 			//sort the players by points
 			sort.Slice(players, func(i, j int) bool {
 				return players[i].Points >= players[j].Points
 			})
 			//return appropriate results to each player
-			previousPoints := 0
+			previousPoints := -1
 			standing := 1
 			for index, player := range players {
 				if index != 0 {
@@ -216,6 +222,8 @@ func AnswerHandler(event Event, p *Player) {
 					Payload: resultPayloadBytes,
 				}
 				player.Egress <- resultEvent
+
+				previousPoints = player.Points
 			}
 
 		} else {
