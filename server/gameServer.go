@@ -16,6 +16,8 @@ const (
 	ROOM_WAITING     = 0
 	ROOM_STARTED     = 1
 	ROOM_ENDED       = 2
+
+	QUESTION_LENGTH = 10
 )
 
 var (
@@ -37,10 +39,12 @@ type RoomState struct {
 }
 
 type GameServer struct {
-	RoomCodeToState map[string]RoomState //a mapping between room code and the users in the room
-	PlayerList      map[string]*Player
-	Handlers        map[string]EventHandler
-	mu              sync.Mutex
+	RoomCodeToState     map[string]RoomState //a mapping between room code and the users in the room
+	PlayerList          map[string]*Player
+	Handlers            map[string]EventHandler
+	CurrentQuestionsMap map[string][QUESTION_LENGTH]int
+	CurrentAnswersMap   map[string]int
+	mu                  sync.Mutex
 }
 
 func NewGameServer() *GameServer {
@@ -48,6 +52,11 @@ func NewGameServer() *GameServer {
 	return &GameServer{
 		RoomCodeToState: make(map[string]RoomState),
 		PlayerList:      make(map[string]*Player),
+		Handlers: map[string]EventHandler{
+			START: StartHandler,
+		},
+		CurrentQuestionsMap: make(map[string][QUESTION_LENGTH]int),
+		CurrentAnswersMap:   make(map[string]int),
 	}
 }
 
@@ -128,6 +137,7 @@ func (gs *GameServer) ServeWS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	player.Connection = conn
+	player.Egress = make(chan Event)
 
 	log.Println(gs.PlayerList)
 	log.Println(gs.RoomCodeToState[player.RoomCode].RoomPlayerList)

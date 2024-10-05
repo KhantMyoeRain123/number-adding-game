@@ -12,6 +12,7 @@ type Player struct {
 	PlayerName string
 	Host       bool
 	RoomCode   string
+	Points     int
 	Connection *websocket.Conn
 	GameServer *GameServer
 	Egress     chan Event
@@ -23,6 +24,7 @@ func NewPlayer(playerId string, playerName string, host bool, roomCode string, c
 		PlayerName: playerName,
 		Host:       host,
 		RoomCode:   roomCode,
+		Points:     0,
 		Connection: conn,
 		GameServer: gameServer,
 		Egress:     make(chan Event),
@@ -61,5 +63,24 @@ func routeEvent(event Event, p *Player) {
 }
 
 func (p *Player) WriteMessages() {
-	return
+	for {
+		select {
+		case event, ok := <-p.Egress:
+			message, err := json.Marshal(event)
+			if err != nil {
+				log.Println("Error marshalling event for writing...")
+			}
+			if !ok {
+				if err = p.Connection.WriteMessage(websocket.CloseMessage, nil); err != nil {
+					log.Println("connection closed: ", err)
+				}
+				return
+			}
+
+			if err := p.Connection.WriteMessage(websocket.TextMessage, message); err != nil {
+				log.Printf("failed to send message: %v", err)
+			}
+			log.Println("message sent")
+		}
+	}
 }
