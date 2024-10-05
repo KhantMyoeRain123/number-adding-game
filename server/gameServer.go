@@ -81,10 +81,17 @@ func (gs *GameServer) AddPlayer(player *Player) {
 func (gs *GameServer) RemovePlayer(player *Player) {
 	log.Println("Closing connection for " + player.PlayerId)
 	if _, ok := gs.PlayerList[player.PlayerId]; ok {
-		player.Connection.Close()
+		if player.Connection != nil {
+			player.Connection.Close()
+		}
 		delete(gs.PlayerList, player.PlayerId)
 
-		roomPlayerList := gs.RoomCodeToState[player.RoomCode].RoomPlayerList
+		roomState, ok := gs.RoomCodeToState[player.RoomCode]
+		if !ok {
+			return
+		}
+		roomPlayerList := roomState.RoomPlayerList
+
 		//if player is host close connections of other  also delete the room
 		if player.Host {
 			for playerId, player := range roomPlayerList {

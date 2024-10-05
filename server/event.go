@@ -104,6 +104,10 @@ func StartHandler(event Event, p *Player) {
 	//set room state to ROOM_STARTED
 	roomState.State = ROOM_STARTED
 	roomState.RoundNumber = 1
+	//reset points of players
+	for _, player := range roomState.RoomPlayerList {
+		player.Points = 0
+	}
 	//generates a question and the answer for the room the host is in
 	SendQuestionEvent(p, roomState)
 }
