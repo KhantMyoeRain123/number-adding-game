@@ -17,7 +17,8 @@ const (
 	ROOM_STARTED     = 1
 	ROOM_ENDED       = 2
 
-	QUESTION_LENGTH = 10
+	QUESTION_LENGTH      = 10
+	MAX_NUMBER_OF_ROUNDS = 5
 )
 
 var (
@@ -34,29 +35,30 @@ var (
 )
 
 type RoomState struct {
-	RoomPlayerList map[string]*Player
-	State          int
+	RoomPlayerList  map[string]*Player
+	State           int
+	CurrentQuestion [QUESTION_LENGTH]int
+	CurrentAnswer   int
+	RoundNumber     int
+	NumberSubmitted int
 }
 
 type GameServer struct {
-	RoomCodeToState     map[string]RoomState //a mapping between room code and the users in the room
-	PlayerList          map[string]*Player
-	Handlers            map[string]EventHandler
-	CurrentQuestionsMap map[string][QUESTION_LENGTH]int
-	CurrentAnswersMap   map[string]int
-	mu                  sync.Mutex
+	RoomCodeToState map[string]*RoomState //a mapping between room code and the users in the room
+	PlayerList      map[string]*Player
+	Handlers        map[string]EventHandler
+	mu              sync.Mutex
 }
 
 func NewGameServer() *GameServer {
 
 	return &GameServer{
-		RoomCodeToState: make(map[string]RoomState),
+		RoomCodeToState: make(map[string]*RoomState),
 		PlayerList:      make(map[string]*Player),
 		Handlers: map[string]EventHandler{
-			START: StartHandler,
+			START:  StartHandler,
+			ANSWER: AnswerHandler,
 		},
-		CurrentQuestionsMap: make(map[string][QUESTION_LENGTH]int),
-		CurrentAnswersMap:   make(map[string]int),
 	}
 }
 
@@ -67,18 +69,6 @@ func generateCode(length int) string {
 		roomCode[i] = charset[rand.IntN(len(charset))]
 	}
 	return string(roomCode)
-}
-
-type ErrorResponse struct {
-	Status  string `json:"status"`
-	Message string `json:"message"`
-}
-
-type WebsocketUpgradeResponse struct {
-	PlayerId   string
-	PlayerName string
-	RoomCode   string
-	Host       bool
 }
 
 func (gs *GameServer) AddPlayer(player *Player) {
@@ -147,6 +137,11 @@ func (gs *GameServer) ServeWS(w http.ResponseWriter, r *http.Request) {
 
 }
 
+type ErrorResponse struct {
+	Status  string `json:"status"`
+	Message string `json:"message"`
+}
+
 func SendJSONError(w http.ResponseWriter, message string, statusCode int) {
 	errorResponse := ErrorResponse{
 		Status:  "error",
@@ -178,9 +173,13 @@ func (gs *GameServer) MakeRoom(w http.ResponseWriter, r *http.Request) {
 	gs.mu.Lock()
 	defer gs.mu.Unlock()
 	//create the new room
-	gs.RoomCodeToState[roomCode] = RoomState{
-		RoomPlayerList: make(map[string]*Player),
-		State:          ROOM_WAITING,
+	gs.RoomCodeToState[roomCode] = &RoomState{
+		RoomPlayerList:  make(map[string]*Player),
+		State:           ROOM_WAITING,
+		CurrentQuestion: [QUESTION_LENGTH]int{},
+		CurrentAnswer:   -1,
+		RoundNumber:     0,
+		NumberSubmitted: 0,
 	}
 	log.Printf("Created a new room with code %s...", roomCode)
 	player := NewPlayer(playerId, playerName, true, roomCode, nil, gs)
@@ -221,6 +220,7 @@ func (gs *GameServer) JoinRoom(w http.ResponseWriter, r *http.Request) {
 			RoomCode: roomCode,
 			State:    gs.RoomCodeToState[roomCode].State,
 		}
+
 		player := NewPlayer(playerId, playerName, false, roomCode, nil, gs)
 		gs.AddPlayer(player)
 

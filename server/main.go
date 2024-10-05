@@ -25,10 +25,13 @@ func setupAPI(mux *http.ServeMux) {
 	defer func() {
 		for playerId, player := range gameServer.PlayerList {
 			log.Println("Closing connection for " + playerId)
-			player.Connection.WriteMessage(
-				websocket.CloseMessage,
-				websocket.FormatCloseMessage(websocket.CloseGoingAway, "Closing connection for "+playerId),
-			)
+			if player.Connection != nil {
+				player.Connection.WriteMessage(
+					websocket.CloseMessage,
+					websocket.FormatCloseMessage(websocket.CloseGoingAway, "Closing connection for "+playerId),
+				)
+			}
+
 		}
 	}()
 
