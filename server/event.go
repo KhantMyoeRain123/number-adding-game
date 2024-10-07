@@ -26,6 +26,7 @@ const (
 	CORRECT   = "correct"
 	INCORRECT = "incorrect"
 	RESULT    = "result"
+	NEWUSER   = "new_user"
 )
 
 // input
@@ -51,6 +52,15 @@ type IncorrectPayload struct {
 type ResultPayload struct {
 	Standing int `json:"standing"`
 	Points   int `json:"points"`
+}
+
+type PlayerInfo struct {
+	PlayerId   string `json:"playerId"`
+	PlayerName string `json:"playerName"`
+}
+type NewPlayerPayload struct {
+	NewPlayerInfo PlayerInfo            `json:"new_player_info"`
+	PlayersInRoom map[string]PlayerInfo `json:"players_in_room"`
 }
 
 func Broadcast(p *Player, event Event) {

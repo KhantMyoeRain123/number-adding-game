@@ -139,11 +139,42 @@ func (gs *GameServer) ServeWS(w http.ResponseWriter, r *http.Request) {
 	player.Connection = conn
 	player.Egress = make(chan Event)
 
+	roomPlayerList := gs.RoomCodeToState[player.RoomCode].RoomPlayerList
+
+	playersInRoom := make(map[string]PlayerInfo)
+	for pId, player := range roomPlayerList {
+		playersInRoom[pId] = PlayerInfo{
+			PlayerId:   player.PlayerId,
+			PlayerName: player.PlayerName,
+		}
+	}
+
+	newUserPayload := NewPlayerPayload{
+		NewPlayerInfo: PlayerInfo{
+			PlayerId:   playerId,
+			PlayerName: player.PlayerName,
+		},
+		PlayersInRoom: playersInRoom,
+	}
+	newUserPayloadBytes, err := json.Marshal(newUserPayload)
+	if err != nil {
+		log.Println("Cannot encode new user payload into json...")
+		return
+	}
+	newUserEvent := Event{
+		Type:    NEWUSER,
+		Payload: newUserPayloadBytes,
+	}
+
 	log.Println(gs.PlayerList)
 	log.Println(gs.RoomCodeToState[player.RoomCode].RoomPlayerList)
 
 	go player.ReadMessages()
 	go player.WriteMessages()
+
+	for _, player := range roomPlayerList {
+		player.Egress <- newUserEvent
+	}
 
 }
 
